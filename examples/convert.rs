@@ -12,13 +12,7 @@ struct Args {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // let args = Args::parse();
-    let args = Args {
-        input: "/Users/chen/source/octofile-localization/localization/zh-Hans/Localizable.strings"
-            .into(),
-        output: "/Users/chen/source/octofile-localization/localization/zh-Hans/Localizable.xml"
-            .into(),
-    };
+    let args = Args::parse();
     let input = &args.input;
     let output = &args.output;
     strings_to_xml(input, output)

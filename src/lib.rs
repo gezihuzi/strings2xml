@@ -1,35 +1,36 @@
 use std::fs::File;
-use std::io::{BufRead, BufReader, Write};
+use std::io::{BufRead, BufReader, BufWriter};
 use std::path::Path;
 
+use quick_xml::events::{BytesDecl, BytesEnd, BytesStart, BytesText, Event};
+use quick_xml::Writer;
 use regex::{Captures, Regex};
 
 pub fn strings_to_xml(input: &Path, output: &Path) -> Result<(), Box<dyn std::error::Error>> {
-    let xml = convert_to_xml(&input)?;
-    let mut output = File::create(output)?;
-    write!(output, "{}", xml)?;
-    Ok(())
-}
+    let mut writer = Writer::new(BufWriter::new(File::create(output)?));
+    let decl = BytesDecl::new("1.0", Some("UTF-8"), None);
+    writer.write_event(Event::Decl(decl))?;
+    writer.write_event(Event::Text(BytesText::new("\n")))?;
 
-fn convert_to_xml(path: &Path) -> Result<String, Box<dyn std::error::Error>> {
-    let file = File::open(path).expect("Failed to open input file");
+    writer.write_event(Event::Start(BytesStart::new("resources")))?;
+    writer.write_event(Event::Text(BytesText::new("\n")))?;
+    let file = File::open(input).expect("Failed to open input file");
     let reader = BufReader::new(file);
-    let mut xml = "".to_string();
-    // 遍历文件的每一行
     for line in reader.lines() {
         if let Ok(line_str) = line {
-            // 解析每一行，提取出key和value
             if let Some((key, value)) = parse_line(&line_str) {
-                // 将key和value添加到JSON对象中
-                xml += &format!(
-                    "<string name=\"{}\">{}</string>\n",
-                    escape_xml_entities(&key),
-                    escape_xml_entities(&value)
-                );
+                let mut element = BytesStart::new("string");
+                element.push_attribute(("name", &*key));
+                writer.write_event(Event::Text(BytesText::new("\t")))?;
+                writer.write_event(Event::Start(element))?;
+                writer.write_event(Event::Text(BytesText::new(&value)))?;
+                writer.write_event(Event::End(BytesEnd::new("string")))?;
+                writer.write_event(Event::Text(BytesText::new("\n")))?;
             }
         }
     }
-    Ok(xml)
+    writer.write_event(Event::End(BytesEnd::new("resources")))?;
+    Ok(())
 }
 
 fn parse_line(line: &str) -> Option<(String, String)> {
@@ -53,10 +54,4 @@ fn parse_line(line: &str) -> Option<(String, String)> {
         }
     }
     None
-}
-
-fn escape_xml_entities(s: &str) -> String {
-    s.replace("&", "&amp;")
-        .replace("<", "&lt;")
-        .replace(">", "&gt;")
 }
