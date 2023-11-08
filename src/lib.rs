@@ -38,12 +38,12 @@ fn parse_line(line: &str) -> Option<(String, String)> {
         if parts.len() == 2 {
             let key = parts[0].trim_end_matches(';').trim_matches('"').to_string();
             let mut value = parts[1].trim_end_matches(';').trim_matches('"').to_string();
-            // 将%1$@，%2$@等转换为${t1}，${t2}等
+            // 将有序的%n$@ 替换为%n$s
             let re = Regex::new(r"%(\d+)\$@").ok()?;
             value = re
                 .replace_all(&value, |caps: &Captures| format!("%{}$s", &caps[1]))
                 .to_string();
-            // 将%@转换为{t1}，{t2}等，根据实际的顺序
+            // 将无序的%@ 替换为%s
             let re_unordered = Regex::new(r"%@").ok()?;
             value = re_unordered
                 .replace_all(&value, |_caps: &Captures| "%s")
